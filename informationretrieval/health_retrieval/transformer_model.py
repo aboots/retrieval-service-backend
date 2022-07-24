@@ -49,7 +49,8 @@ class TransformerEmb(BaseModel):
         for doc in doc_embs:
             data[doc['title']] = (
                 self.cosine_similarity(v, np.array(doc['vector'])), self.docs_links[str(doc['index'])])
-        return [(k, v[1]) for k, v in sorted(data.items(), key=lambda item: item[1][0])][::-1][:k]
+        ls = [(k, v[1]) for k, v in sorted(data.items(), key=lambda item: item[1][0])][::-1][:(k * 3)]
+        return self.get_top_k_unique(ls, k)
 
 
 transformer_model = TransformerEmb()

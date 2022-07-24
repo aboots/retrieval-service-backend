@@ -19,3 +19,12 @@ class BaseModel:
                 doc_embs}
         sorted_ls = [v[1] for k, v in sorted(data.items(), key=lambda item: item[1][0])]
         return sorted_ls[::-1][:k], sorted_ls[:k]
+
+    def get_top_k_unique(self, docs, k):
+        final = []
+        for item in docs:
+            if item not in final:
+                final.append(item)
+                if len(final) == k:
+                    return final
+        return final

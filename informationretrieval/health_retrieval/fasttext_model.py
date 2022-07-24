@@ -40,7 +40,8 @@ class FastTextEmb(BaseModel):
         data = {}
         for doc in doc_embs:
             data[doc['title']] = (self.cosine_similarity(v, doc['emb']), doc['link'])
-        return [(k, v[1]) for k, v in sorted(data.items(), key=lambda item: item[1][0])][::-1][:k]
+        ls = [(k, v[1]) for k, v in sorted(data.items(), key=lambda item: item[1][0])][::-1][:(3 * k)]
+        return self.get_top_k_unique(ls, k)
 
     def get_text_embeding(self, text):
         tokens = [_ for _ in word_tokenize(self.normalizer.normalize(text)) if _ not in self.total_stop_words]

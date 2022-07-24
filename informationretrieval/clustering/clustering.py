@@ -20,12 +20,17 @@ class KmeansClustering:
         emb = fasttext_model.get_text_embeding(text)
         predicted_cluster = self.kmeans.predict([emb / np.linalg.norm(emb)])[0]
         df_same_cluster = self.df[self.df['cluster'] == predicted_cluster].reset_index(drop=True)
-        ten_most_similar_index = list(
-            np.argsort(df_same_cluster.apply(lambda x: self.cosine_similarity(x['embedding'], emb), axis=1))[-k:][
+        most_similar_index = list(
+            np.argsort(df_same_cluster.apply(lambda x: self.cosine_similarity(x['embedding'], emb), axis=1))[-(k * 3):][
             ::-1])
         result = []
-        for i in ten_most_similar_index:
-            result.append({'title': df_same_cluster['title'][i], 'url': df_same_cluster['link'][i]})
+        uniques = set()
+        for i in most_similar_index:
+            if (df_same_cluster['title'][i], df_same_cluster['link'][i]) not in uniques:
+                result.append({'title': df_same_cluster['title'][i], 'url': df_same_cluster['link'][i]})
+                uniques.add((df_same_cluster['title'][i], df_same_cluster['link'][i]))
+                if len(result) == k:
+                    return result
         return result
 
     def cosine_similarity(self, vector_1: np.ndarray, vector_2: np.ndarray) -> float:
