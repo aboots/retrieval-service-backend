@@ -6,8 +6,12 @@ import torch
 
 from transformers import BigBirdModel, AutoTokenizer
 
+from informationretrieval.health_retrieval.base_emb_model import BaseModel
 
-class TransformerEmb:
+
+class TransformerEmb(BaseModel):
+    vector_title = 'vector'
+
     def __init__(self):
         self.model = BigBirdModel.from_pretrained('models/pretrained-transformer-model.model')
         self.tokenizer = AutoTokenizer.from_pretrained('models/pretrained-transformer-tokenizer')
@@ -29,9 +33,11 @@ class TransformerEmb:
             print(f'{i + 1}- link: {item[1]}')
             print('-------------------------')
 
-    def get_query(self, query, k=10):
+    def get_query(self, query, k=10, query_expansion=True):
         encoded_query = self.model(**self.tokenizer(query, return_tensors='pt'))[0].detach().squeeze()
         encoded_query = torch.mean(encoded_query, dim=0).numpy()
+        if query_expansion:
+            encoded_query = self.rocchio(encoded_query, self.docs_embs)
         return self.nearest_neighbor(encoded_query, self.docs_embs, k)
 
     def cosine_similarity(self, vector_1: np.ndarray, vector_2: np.ndarray) -> float:

@@ -2,6 +2,7 @@ import json
 import numpy as np
 from hazm import *
 from random import shuffle
+from informationretrieval.health_retrieval import fasttext_model
 
 
 class BooleanModel:
@@ -47,8 +48,18 @@ class BooleanModel:
             return operand1 | operand2
 
     def get_nearest_neighbors(self, query, k):
-        neighbors = list()
+        results = set()
         operands, operators = self.process_query(query)
+        results |= set(self.get_result(operands, operators))
+        for _ in range(5):
+            new_operands= self.query_expansion(operands)
+            results |= set(self.get_result(new_operands, operators))
+        results = list(results)
+        shuffle(results)
+        return results[:k] if k < len(results) else results
+
+    def get_result(self, operands, operators):
+        neighbors = list()
         n = len(operands)
         if n < 2:
             result = self.get_token_column(operands[0])
@@ -62,22 +73,36 @@ class BooleanModel:
         indices = result.nonzero()[0]
         for index in indices:
             neighbors.append(self.data[index])
-        shuffle(neighbors)
-        return neighbors[:k] if k < len(neighbors) else neighbors
+        return self.convert_dic_ls_to_tuples(neighbors)
+
+    def query_expansion(self, operands):
+        new_operands = []
+        for item in operands:
+            similar_words = fasttext_model.ft_model.wv.most_similar(item[1])
+            similar_words_list = []
+            for word in similar_words:
+                if 0.8 < word[1] < 0.98:
+                    lemmatized = self.lemmatizer.lemmatize(word[0])
+                    if lemmatized not in ([_[1] for _ in new_operands] + similar_words_list):
+                        similar_words_list.append(lemmatized)
+            new_operands.append((item[0], np.random.choice(similar_words_list)))
+        return new_operands
 
     def print_similars(self, query, k=10):
         ls = self.get_nearest_neighbors(query, k)
         for i, item in enumerate(ls):
-            print(f"{i + 1}- title: {item['title']}")
-            print(f"{i + 1}- link: {item['link']}")
+            print(f"{i + 1}- title: {item[0]}")
+            print(f"{i + 1}- link: {item[1]}")
             print('-------------------------')
 
-    def get_query(self, query, k=10):
-        ls = self.get_nearest_neighbors(query, k)
+    def convert_dic_ls_to_tuples(self, ls):
         final_ls = []
         for item in ls:
             final_ls.append((item['title'], item['link']))
         return final_ls
+
+    def get_query(self, query, k=10):
+        return self.get_nearest_neighbors(query, k)
 
 
 boolean_model = BooleanModel()

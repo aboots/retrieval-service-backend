@@ -5,8 +5,10 @@ import numpy as np
 from scipy import sparse
 from hazm import *
 
+from informationretrieval.health_retrieval.base_emb_model import BaseModel
 
-class TfidfModel:
+
+class TfidfModel(BaseModel):
     def __init__(self):
         self.doc_term_mat = sparse.load_npz("models/doc-term-tfidf.npz")
         with open(f'models/doc-term-tfidf-data.json', 'r', encoding="utf-8") as f:
@@ -27,14 +29,17 @@ class TfidfModel:
             print(f'{i + 1}- link: {item[1]}')
             print('-------------------------')
 
-    def get_query(self, query, k=10):
+    def get_query(self, query, k=10, query_expansion=True):
         query_tokens = [_ for _ in word_tokenize(self.normalizer.normalize(query)) if _ not in self.total_stop_words]
         emb = self.tfidfvectorizer.transform([' '.join(query_tokens)])
         docs = []
         for i, doc in enumerate(self.doc_term_mat):
             docs.append(
                 {'title': self.docs_data[i]['title'], 'emb': doc[0].toarray()[0], 'link': self.docs_data[i]['link']})
-        return self.nearest_neighbor(emb[0].toarray()[0], docs, k)
+        emb = emb[0].toarray()[0]
+        if query_expansion:
+            emb = self.rocchio(emb, docs)
+        return self.nearest_neighbor(emb, docs, k)
 
     def cosine_similarity(self, vector_1: np.ndarray, vector_2: np.ndarray) -> float:
         return np.dot(vector_1, vector_2) / (np.linalg.norm(vector_1) *

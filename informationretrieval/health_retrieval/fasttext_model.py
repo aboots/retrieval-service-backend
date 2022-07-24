@@ -4,8 +4,10 @@ import numpy as np
 from hazm import *
 from gensim.models.fasttext import FastText
 
+from informationretrieval.health_retrieval.base_emb_model import BaseModel
 
-class FastTextEmb:
+
+class FastTextEmb(BaseModel):
     def __init__(self):
         self.ft_model = FastText.load('models/_fasttext.model')
         with open(f'models/fasttext_docs_embedding.json', 'r', encoding="utf-8") as f:
@@ -24,17 +26,15 @@ class FastTextEmb:
             print(f'{i + 1}- link: {item[1]}')
             print('-------------------------')
 
-    def get_query(self, query, k=10):
+    def get_query(self, query, k=10, query_expansion=True):
         query_tokens = [_ for _ in word_tokenize(self.normalizer.normalize(query)) if _ not in self.total_stop_words]
         emb = np.zeros(self.ft_model.wv.vector_size)
         for token in query_tokens:
             emb += self.ft_model.wv[token]
         emb /= len(query_tokens)
+        if query_expansion:
+            emb = self.rocchio(emb, self.docs_embs)
         return self.nearest_neighbor(emb, self.docs_embs, k)
-
-    def cosine_similarity(self, vector_1: np.ndarray, vector_2: np.ndarray) -> float:
-        return np.dot(vector_1, vector_2) / (np.linalg.norm(vector_1) *
-                                             np.linalg.norm(vector_2))
 
     def nearest_neighbor(self, v, doc_embs, k):
         data = {}
