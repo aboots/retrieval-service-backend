@@ -25,4 +25,6 @@ class QueryRetrievalView(APIView):
             return transformer_model
         if method == 'tfidf':
             return tfidf_model
+        if method == 'elastic':
+            return elastic_model
         return fasttext_model
