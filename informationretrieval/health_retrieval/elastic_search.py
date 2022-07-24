@@ -1,6 +1,5 @@
 import json
 import time
-import pandas as pd
 from elasticsearch import Elasticsearch
 from subprocess import Popen
 
@@ -25,6 +24,8 @@ class ElasticSearch:
                 data.extend(json.loads(f.read()))
             with open(f'{folder_path}/hidoctor-p{i}.json', 'r', encoding="utf-8") as f:
                 data.extend(json.loads(f.read()))
+        data = {(_['title'], _['link'], _['text']) for _ in data}
+        data = [{'title': _[0], 'link': _[1], "text": _[2]} for _ in data]
         print("Creating Index and Adding Data...")
         if self.client.indices.exists(index=self.index):
             self.delete_index()
@@ -54,37 +55,8 @@ class ElasticSearch:
             es_data.append(record)
         return es_data
 
-    def index_es_data(self, index, es_data):
-        es_client = Elasticsearch(hosts=self.hosts)
-        if es_client.indices.exists(index=index):
-            print("deleting the '{}' index.".format(index))
-            res = es_client.indices.delete(index=index)
-            print("Response from server: {}".format(res))
-
-        print("creating the '{}' index.".format(index))
-        res = es_client.indices.create(index=index)
-        print("Response from server: {}".format(res))
-
-        print("bulk index the data")
-        res = es_client.bulk(index=index, body=es_data, refresh=True)
-        print("Errors: {}, Num of records indexed: {}".format(res["errors"], len(res["items"])))
-
-    def show(self, results):
-        res = []
-        print()
-        print('Results:')
-        for ix, paper in enumerate(results):
-            print(f'\n{ix}.', end='')
-            print(f" {paper['_source']['title']}")
-            print(f"Score: {paper['_score']}")
-            res.append({'title': paper['_source']['title'],
-                        'url': paper['_source']['url'],
-                        'score': paper['_score']})
-        print()
-        return res
-
     def get_query(self, query, k=10):
-        response = self.client.search(index=self.index, query={"match": {"text": query}})['hits']['hits'][:k]
+        response = self.client.search(index=self.index, query={"match": {"text": query}}, size=k)['hits']['hits']
         result = []
         for item in response:
             result.append((item['_source']['title'], item['_source']['link']))
