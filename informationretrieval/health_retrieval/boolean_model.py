@@ -85,8 +85,9 @@ class BooleanModel:
                     lemmatized = self.lemmatizer.lemmatize(word[0])
                     if lemmatized not in ([_[1] for _ in new_operands] + similar_words_list):
                         similar_words_list.append(lemmatized)
-            new_operands.append((item[0], np.random.choice(similar_words_list)))
-        return new_operands
+            if len(similar_words_list) > 0:
+                new_operands.append((item[0], np.random.choice(similar_words_list)))
+        return new_operands if new_operands else operands
 
     def print_similars(self, query, k=10):
         ls = self.get_nearest_neighbors(query, k)
