@@ -1,11 +1,22 @@
+import codecs
 import json
 import time
 from elasticsearch import Elasticsearch
 from subprocess import Popen
 
+from hazm import Normalizer, word_tokenize
+
+from informationretrieval.health_retrieval import fasttext_model
+
 
 class ElasticSearch:
     def __init__(self, host='http://localhost:9200', elasticsearch_path=None):
+        self.normalizer = Normalizer()
+        stopwords = [self.normalizer.normalize(x.strip()) for x in
+                     codecs.open('stopwords/stopwords.txt', 'r', 'utf-8').readlines()]
+        custom_stop_words = [self.normalizer.normalize(x.strip()) for x in
+                             codecs.open('stopwords/custom_stopwords.txt', 'r', 'utf-8').readlines()]
+        self.total_stop_words = custom_stop_words + stopwords
         self.hosts = [host]
         self.index = 'health'
         if elasticsearch_path:
@@ -56,11 +67,40 @@ class ElasticSearch:
         return es_data
 
     def get_query(self, query, k=10):
-        response = self.client.search(index=self.index, query={"match": {"text": query}}, size=k)['hits']['hits']
+        query_tokens = [_ for _ in word_tokenize(self.normalizer.normalize(query)) if _ not in self.total_stop_words]
+        response = self.search_client(query, k)
+        if len(response) < k:
+            final_query = " ".join(self.expansion_query(query_tokens))
+            response = self.search_client(final_query, k)
         result = []
         for item in response:
             result.append((item['_source']['title'], item['_source']['link']))
         return result
+
+    def search_client(self, query, k):
+        body = {
+            "size": k,
+            "query": {
+                "multi_match": {
+                    "query": query,
+                    "type": "most_fields",
+                    "fields": [
+                        "title^2",
+                        "text"
+                    ]
+                }
+            }
+        }
+        return self.client.search(index=self.index, body=body)['hits']['hits']
+
+    def expansion_query(self, tokens):
+        final_tokens = tokens.copy()
+        for token in tokens:
+            similar_words = fasttext_model.ft_model.wv.most_similar(token)
+            for word in similar_words:
+                if 0.85 < word[1] < 0.98:
+                    final_tokens.append(word[0])
+        return final_tokens
 
 
 # local_mode
