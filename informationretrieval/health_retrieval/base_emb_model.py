@@ -6,8 +6,8 @@ class BaseModel:
 
     def rocchio(self, v, doc_embs):
         nearest, furthest = self.k_nearest_furthest_neighbors(v, doc_embs, 10)
-        nearest_mean = np.mean(nearest)
-        furthest_mean = np.mean(furthest)
+        nearest_mean = np.mean(nearest, axis=0)
+        furthest_mean = np.mean(furthest, axis=0)
         return v + nearest_mean - furthest_mean
 
     def cosine_similarity(self, vector_1: np.ndarray, vector_2: np.ndarray) -> float:

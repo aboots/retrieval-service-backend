@@ -66,10 +66,10 @@ class ElasticSearch:
             es_data.append(record)
         return es_data
 
-    def get_query(self, query, k=10):
+    def get_query(self, query, k=10, query_expansion=True):
         query_tokens = [_ for _ in word_tokenize(self.normalizer.normalize(query)) if _ not in self.total_stop_words]
         response = self.search_client(query, k)
-        if len(response) < k:
+        if query_expansion or len(response) < k:
             final_query = " ".join(self.expansion_query(query_tokens))
             response = self.search_client(final_query, k)
         result = []

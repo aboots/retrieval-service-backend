@@ -9,8 +9,10 @@ class QueryRetrievalView(APIView):
         method = self.request.query_params['method']
         model = self.get_model(method)
         query = self.request.query_params['query']
+        query_expansion = self.request.query_params['query_expansion']
+        query_expansion = True if query_expansion == 'true' else False
         k = 10 if 'k' not in self.request.query_params else int(self.request.query_params['k'])
-        ls = model.get_query(query, k)
+        ls = model.get_query(query, k, query_expansion)
         final_ls = []
         for item in ls:
             final_ls.append({'title': item[0], 'url': item[1]})

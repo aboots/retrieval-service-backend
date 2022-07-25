@@ -47,13 +47,14 @@ class BooleanModel:
         elif operator == 'or':
             return operand1 | operand2
 
-    def get_nearest_neighbors(self, query, k):
+    def get_nearest_neighbors(self, query, k, query_expansion=True):
         results = set()
         operands, operators = self.process_query(query)
         results |= set(self.get_result(operands, operators))
-        for _ in range(5):
-            new_operands= self.query_expansion(operands)
-            results |= set(self.get_result(new_operands, operators))
+        if query_expansion:
+            for _ in range(5):
+                new_operands = self.query_expansion(operands)
+                results |= set(self.get_result(new_operands, operators))
         results = list(results)
         shuffle(results)
         return results[:k] if k < len(results) else results
@@ -102,8 +103,8 @@ class BooleanModel:
             final_ls.append((item['title'], item['link']))
         return final_ls
 
-    def get_query(self, query, k=10):
-        return self.get_nearest_neighbors(query, k)
+    def get_query(self, query, k=10, query_expansion=True):
+        return self.get_nearest_neighbors(query, k, query_expansion)
 
 
 boolean_model = BooleanModel()
